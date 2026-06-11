@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="ECG Digitizer - AI-Powered Signal Extraction">
+  <title>ECG Digitizer - AI-Powered Signal Extraction</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #000;
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    /* Landing Page Styles */
+    #landing-page {
+      display: block;
+    }
+
+    #landing-page.hidden {
+      display: none;
+    }
+
+    /* Scroll Story Section */
+    .scroll-story {
+      position: relative;
+      height: 500vh;
+      width: 100%;
+    }
+
+    .scroll-story__canvas-container {
+      position: sticky;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      overflow: hidden;
+    }
+
+    .scroll-story__canvas {
+      max-width: 90vw;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 20px;
+    }
+
+    /* Loading State */
+    .scroll-story__loader {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      z-index: 100;
+    }
+
+    .scroll-story__loader-spinner {
+      width: 60px;
+      height: 60px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #00d9ff;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .scroll-story__loader-text {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 1.2rem;
+      font-weight: 500;
+    }
+
+    .scroll-story__loader-progress {
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 0.95rem;
+    }
+
+    .scroll-story__loader.hidden {
+      display: none;
+    }
+
+    /* Text Overlays */
+    .scroll-story__text {
+      position: absolute;
+      opacity: 0;
+      transition: opacity 0.5s ease, transform 0.5s ease;
+      pointer-events: none;
+      z-index: 50;
+    }
+
+    .scroll-story__text.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Glass Card Effect */
+    .scroll-story__card {
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: clamp(32px, 5vw, 48px);
+      box-shadow: 0 25px 80px rgba(0, 217, 255, 0.15);
+    }
+
+    /* Hero Section */
+    .scroll-story__text--1 {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      width: 90%;
+      max-width: 900px;
+    }
+
+    .scroll-story__badge {
+      display: inline-block;
+      background: rgba(0, 217, 255, 0.1);
+      border: 1px solid rgba(0, 217, 255, 0.3);
+      border-radius: 30px;
+      padding: 12px 28px;
+      font-size: clamp(0.75rem, 1.5vw, 0.9rem);
+      font-weight: 600;
+      letter-spacing: 3px;
+      color: #032d34;
+      margin-bottom: 32px;
+      text-transform: uppercase;
+    }
+
+    .scroll-story__title {
+      font-size: clamp(3rem, 10vw, 6rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, #00d9ff 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.1;
+      margin-bottom: 24px;
+    }
+
+    .scroll-story__subtitle {
+      font-size: clamp(1.1rem, 2.5vw, 1.6rem);
+      font-weight: 400;
+      background: linear-gradient(135deg, #00d9ff 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      
+      max-width: 650px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+
+    /* Left/Right Cards */
+    .scroll-story__text--2 {
+      top: 50%;
+      left: clamp(20px, 5vw, 80px);
+      transform: translateY(-50%) translateX(-30px);
+      max-width: min(500px, 45vw);
+    }
+
+    .scroll-story__text--2.visible {
+      transform: translateY(-50%) translateX(0);
+    }
+
+    .scroll-story__text--3 {
+      top: 50%;
+      right: clamp(20px, 5vw, 80px);
+      transform: translateY(-50%) translateX(30px);
+      max-width: min(500px, 45vw);
+    }
+
+    .scroll-story__text--3.visible {
+      transform: translateY(-50%) translateX(0);
+    }
+
+    .scroll-story__card-title {
+      font-size: clamp(1.8rem, 3.5vw, 2.5rem);
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 20px;
+      line-height: 1.2;
+    }
+
+    .scroll-story__card-text {
+      font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.7;
+      margin-bottom: 24px;
+    }
+
+    .scroll-story__accent-line {
+      height: 3px;
+      width: 100px;
+      background: linear-gradient(90deg, #00d9ff, #a78bfa);
+      border-radius: 3px;
+    }
+
+    /* Center Cards */
+    .scroll-story__text--4 {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.95);
+      max-width: min(650px, 85vw);
+      text-align: center;
+    }
+
+    .scroll-story__text--4.visible {
+      transform: translate(-50%, -50%) scale(1);
+    }
+
+    .scroll-story__text--5 {
+      bottom: clamp(50px, 10vh, 120px);
+      left: 50%;
+      transform: translateX(-50%) translateY(30px);
+      max-width: min(600px, 85vw);
+      text-align: center;
+    }
+
+    .scroll-story__text--5.visible {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .scroll-story__stats {
+      display: flex;
+      justify-content: center;
+      gap: clamp(30px, 5vw, 60px);
+      margin-top: 32px;
+      flex-wrap: wrap;
+    }
+
+    .scroll-story__stat-value {
+      font-size: clamp(2.2rem, 5vw, 3rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, #00d9ff, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .scroll-story__stat-label {
+      font-size: clamp(0.8rem, 1.5vw, 1rem);
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 8px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .scroll-story__stat-divider {
+      width: 1px;
+      height: 80px;
+      background: rgba(255, 255, 255, 0.2);
+      align-self: center;
+    }
+
+    /* CTA Section */
+    .scroll-story__text--6 {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) translateY(40px);
+      text-align: center;
+      width: 90%;
+      max-width: 800px;
+    }
+
+    .scroll-story__text--6.visible {
+      transform: translate(-50%, -50%) translateY(0);
+    }
+
+    .scroll-story__cta-title {
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 800;
+      background: linear-gradient(135deg, #00d9ff, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 24px;
+      line-height: 1.2;
+    }
+
+    .scroll-story__cta-subtitle {
+      font-size: clamp(1rem, 2vw, 1.3rem);
+      color: rgba(12, 1, 1, 0.7);
+      margin-bottom: 48px;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.6;
+    }
+
+    .scroll-story__cta-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 16px;
+      background: linear-gradient(135deg, #00d9ff, #a78bfa);
+      color: #000;
+      font-size: clamp(1.1rem, 2vw, 1.3rem);
+      font-weight: 700;
+      padding: 20px 48px;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 20px 60px rgba(0, 217, 255, 0.3);
+      transition: all 0.4s ease;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .scroll-story__cta-button:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 30px 80px rgba(0, 217, 255, 0.5);
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    /* React App Container */
+    #root {
+      display: none;
+    }
+
+    #root.show {
+      display: block;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .scroll-story {
+        height: 600vh;
+      }
+
+      .scroll-story__text--2,
+      .scroll-story__text--3,
+      .scroll-story__text--5 {
+        left: 50%;
+        right: auto;
+        transform: translate(-50%, -50%);
+        max-width: 90vw;
+        text-align: center;
+      }
+
+      .scroll-story__text--2.visible,
+      .scroll-story__text--3.visible {
+        transform: translate(-50%, -50%);
+      }
+
+      .scroll-story__accent-line {
+        margin: 0 auto;
+      }
+
+      .scroll-story__stat-divider {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  
+  <!-- Landing Page -->
+  <div id="landing-page">
+    <section class="scroll-story" id="scrollStory">
+      <div class="scroll-story__canvas-container">
+        <canvas class="scroll-story__canvas" id="scrollStoryCanvas"></canvas>
+
+        <!-- Loading State -->
+        <div class="scroll-story__loader" id="scrollStoryLoader">
+          <div class="scroll-story__loader-spinner"></div>
+          <div class="scroll-story__loader-text">Loading Experience</div>
+          <div class="scroll-story__loader-progress" id="scrollStoryProgress">0 / 240 frames</div>
+        </div>
+
+        <!-- Text Overlays -->
+        <div class="scroll-story__text scroll-story__text--1 visible" id="scrollText1">
+          <div class="scroll-story__badge">AI-POWERED ANALYSIS</div>
+          <h1 class="scroll-story__title">ECG Digitization</h1>
+          <p class="scroll-story__subtitle">Transform Paper ECG Records into Digital Signals: Independent of Lead, Format, or Layout </p>
+        </div>
+
+        <div class="scroll-story__text scroll-story__text--2" id="scrollText2">
+          <div class="scroll-story__card">
+            <h2 class="scroll-story__card-title">From Paper to Pixels</h2>
+            <p class="scroll-story__card-text">Deep Learning to analyze your paper ECG scan, extracting every detail from the original recording with high precision.</p>
+            <div class="scroll-story__accent-line"></div>
+          </div>
+        </div>
+
+        <div class="scroll-story__text scroll-story__text--3" id="scrollText3">
+          <div class="scroll-story__card">
+            <h2 class="scroll-story__card-title">5-Fold Ensemble</h2>
+            <p class="scroll-story__card-text">Five specialized ensemled AI models work in harmony, combining their predictions for maximum accuracy and reliability in signal extraction.</p>
+            <div class="scroll-story__accent-line"></div>
+          </div>
+        </div>
+
+        <div class="scroll-story__text scroll-story__text--4" id="scrollText4">
+          <div class="scroll-story__card">
+            <h2 class="scroll-story__card-title">Signal Reconstruction</h2>
+            <p class="scroll-story__card-text">Precise vectorization converts pixels to waveforms </p>
+            <div class="scroll-story__stats">
+              <div class="scroll-story__stat">
+                <div class="scroll-story__stat-value">500Hz</div>
+                <div class="scroll-story__stat-label">Sampling Rate</div>
+              </div>
+              <div class="scroll-story__stat-divider"></div>
+              <div class="scroll-story__stat">
+                <div class="scroll-story__stat-value">12</div>
+                <div class="scroll-story__stat-label">Leads</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="scroll-story__text scroll-story__text--5" id="scrollText5">
+          <div class="scroll-story__card">
+            <h2 class="scroll-story__card-title">Single-Lead Processing</h2>
+            <p class="scroll-story__card-text">Specialized architecture optimized for individual ECG lead digitization with highest accuracy</p>
+            <div class="scroll-story__accent-line" style="margin: 24px auto 0;"></div>
+          </div>
+        </div>
+
+        <div class="scroll-story__text scroll-story__text--6" id="scrollText6">
+          <h2 class="scroll-story__cta-title">Ready to Transform Your ECGs?</h2>
+          <p class="scroll-story__cta-subtitle">Experience digitization powered by nnU-Net technology</p>
+          <button class="scroll-story__cta-button" id="startDigitizingBtn">
+            Start Digitizing
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- React App -->
+  <div id="root"></div>
+
+  <script>
+    // Scroll Story Frame Animation
+    (function() {
+      'use strict';
+
+      const FRAME_COUNT = 240;
+      const FRAME_PATH = '%PUBLIC_URL%/frames/';
+      const FRAME_PREFIX = 'ezgif-frame-';
+      const FRAME_EXTENSION = '.png';
+
+      const scrollStory = document.getElementById('scrollStory');
+      const canvas = document.getElementById('scrollStoryCanvas');
+      const ctx = canvas.getContext('2d');
+      const loader = document.getElementById('scrollStoryLoader');
+      const progressText = document.getElementById('scrollStoryProgress');
+      const startBtn = document.getElementById('startDigitizingBtn');
+      const landingPage = document.getElementById('landing-page');
+      const rootElement = document.getElementById('root');
+
+      const textOverlays = {
+        text1: { element: document.getElementById('scrollText1'), start: 0, end: 0.15 },
+        text2: { element: document.getElementById('scrollText2'), start: 0.18, end: 0.35 },
+        text3: { element: document.getElementById('scrollText3'), start: 0.38, end: 0.55 },
+        text4: { element: document.getElementById('scrollText4'), start: 0.58, end: 0.75 },
+        text5: { element: document.getElementById('scrollText5'), start: 0.78, end: 0.90 },
+        text6: { element: document.getElementById('scrollText6'), start: 0.93, end: 1.0 },
+      };
+
+      const frames = [];
+      let framesLoaded = 0;
+      let currentFrame = 0;
+      let isLoading = true;
+      let ticking = false;
+
+      function padNumber(num, size) {
+        let s = String(num);
+        while (s.length < size) s = '0' + s;
+        return s;
+      }
+
+      async function loadFrames() {
+        const loadPromises = [];
+
+        for (let i = 1; i <= FRAME_COUNT; i++) {
+          const img = new Image();
+          const frameNumber = padNumber(i, 3);
+          img.src = FRAME_PATH + FRAME_PREFIX + frameNumber + FRAME_EXTENSION;
+
+          const loadPromise = new Promise((resolve) => {
+            img.onload = () => {
+              framesLoaded++;
+              if (framesLoaded % 20 === 0 || framesLoaded === FRAME_COUNT) {
+                progressText.textContent = framesLoaded + ' / ' + FRAME_COUNT + ' frames';
+              }
+              resolve(img);
+            };
+            img.onerror = () => resolve(null);
+          });
+
+          loadPromises.push(loadPromise);
+        }
+
+        const loadedImages = await Promise.all(loadPromises);
+        loadedImages.forEach((img, index) => {
+          frames[index] = img;
+        });
+
+        loader.classList.add('hidden');
+        isLoading = false;
+
+        if (frames[0]) drawFrame(0);
+        handleScroll();
+      }
+
+      function drawFrame(index) {
+        const frame = frames[index];
+        if (!frame) return;
+
+        if (canvas.width !== frame.width || canvas.height !== frame.height) {
+          canvas.width = frame.width;
+          canvas.height = frame.height;
+        }
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(frame, 0, 0);
+        currentFrame = index;
+      }
+
+      function updateTextVisibility(progress) {
+        Object.values(textOverlays).forEach((overlay) => {
+          if (!overlay.element) return;
+          const isVisible = progress >= overlay.start && progress <= overlay.end;
+          if (isVisible) {
+            overlay.element.classList.add('visible');
+          } else {
+            overlay.element.classList.remove('visible');
+          }
+        });
+      }
+
+      function handleScroll() {
+        if (isLoading) return;
+
+        const rect = scrollStory.getBoundingClientRect();
+        const scrollHeight = scrollStory.offsetHeight - window.innerHeight;
+        let progress = -rect.top / scrollHeight;
+        progress = Math.max(0, Math.min(1, progress));
+
+        const frameIndex = Math.min(Math.floor(progress * (FRAME_COUNT - 1)), FRAME_COUNT - 1);
+
+        if (frameIndex !== currentFrame && frames[frameIndex]) {
+          drawFrame(frameIndex);
+        }
+
+        updateTextVisibility(progress);
+      }
+
+      function onScroll() {
+        if (!ticking) {
+          requestAnimationFrame(() => {
+            handleScroll();
+            ticking = false;
+          });
+          ticking = true;
+        }
+      }
+
+      function showDigitizationApp() {
+        landingPage.classList.add('hidden');
+        rootElement.classList.add('show');
+        window.scrollTo(0, 0);
+      }
+
+      function init() {
+        loadFrames();
+        window.addEventListener('scroll', onScroll, { passive: true });
+        
+        if (startBtn) {
+          startBtn.addEventListener('click', showDigitizationApp);
+        }
+
+        window.addEventListener('resize', () => {
+          if (frames[currentFrame]) drawFrame(currentFrame);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>
