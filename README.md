@@ -326,10 +326,10 @@ Fine-tune the digitization process with these parameters:
 
 #### 4. **Review Results**
 The application provides comprehensive output:
-- ** Digitized Waveform**: Interactive plot of the extracted signal
-- ** Segmentation Mask**: Visual overlay showing detected ECG traces
-- ** Signal Metadata**: Sampling rate, duration, and calibration info
-- ** Quality Metrics**: Processing statistics and confidence scores
+- **Digitized Waveform**: Interactive plot of the extracted signal
+- **Segmentation Mask**: Visual overlay showing detected ECG traces
+- **Signal Metadata**: Sampling rate, duration, and calibration info
+- **Quality Metrics**: Processing statistics and confidence scores
 
 #### 5. **Export Data**
 - **CSV Download**: Time-series data in `Time(s), Amplitude(mV)` format
